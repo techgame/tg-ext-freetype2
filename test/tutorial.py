@@ -16,7 +16,7 @@ from array import array
 import ctypes
 from ctypes import byref
 
-from TG.freetype2.raw import freetype
+from TG.ext.freetype2.raw import freetype
 
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 #~ Definitions 
