@@ -41,10 +41,9 @@ def loadFirstLibrary(*libraryname, **kw):
 
     abiLoadLibrary = abiLoaderMap[abi].LoadLibrary
     for name in libraryname: 
-        path = find_library(name)
-        if path:
-            library = abiLoadLibrary(path)
-            return library
+        for path in iter_find_library(name):
+            try: return abiLoadLibrary(path)
+            except OSError: pass
 
 def attachToLibFn(fn, restype, argtypes, errcheck, lib):
     fn.api = getattr(lib, fn.__name__, None)
@@ -79,7 +78,7 @@ def scrubNamespace(namespace, hostNamespace):
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 if os.name == "nt":
-    def find_library(name, executable_path=os.path.dirname(sys.executable)):
+    def iter_find_library(name, executable_path=os.path.dirname(sys.executable)):
         # See MSDN for the REAL search order.
         paths = [os.path.join(executable_path, 'bin'), executable_path] 
         paths += os.environ['PATH'].split(os.pathsep)
@@ -87,13 +86,12 @@ if os.name == "nt":
         for directory in paths:
             fname = os.path.join(directory, name)
             if os.path.exists(fname):
-                return fname
+                yield fname
             if fname.lower().endswith(".dll"):
                 continue
             fname = fname + ".dll"
             if os.path.exists(fname):
-                return fname
-        return None
+                yield fname
 
 if os.name == "posix" and sys.platform == "darwin":
     from ctypes.macholib.dyld import dyld_find as _dyld_find
@@ -102,7 +100,7 @@ if os.name == "posix" and sys.platform == "darwin":
         '%(path)s%(name)s.dylib',
         '%(path)s%(name)s.framework/%(name)s']
 
-    def find_library(name, executable_path=os.path.dirname(sys.executable)):
+    def iter_find_library(name, executable_path=os.path.dirname(sys.executable)):
         paths = ['', '@executable_path/../Frameworks/', executable_path]
         
 
@@ -112,8 +110,7 @@ if os.name == "posix" and sys.platform == "darwin":
             for pthFmt in pathSearches:
                 libName = pthFmt % libNameData
                 try:
-                    return _dyld_find(libName, executable_path)
+                    yield _dyld_find(libName, executable_path)
                 except ValueError:
                     continue
-        return None
 
